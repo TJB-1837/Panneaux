@@ -72,4 +72,6 @@ cv2.destroyAllWindows()
 
 # Détection des Formes / contours fermés
 
-cv2.findContours()
+contours, hierachie = cv2.findContours(img_Canny,)
+imContours = cv2.drawContours(Reco_rgb,contours)
+cv2.imshow("Contours",imContours)
