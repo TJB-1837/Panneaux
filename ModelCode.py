@@ -4,7 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os 
 import tensorflow as tf
-import keras 
+import keras
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
 
 # défition des chemins 
 strLabels = "labels.csv"
@@ -54,4 +56,27 @@ def preTraitement(img):
     img = normaliser(img)
     return img
 
+ImageDataGenerator()
+
+img = cv2.imread("myData/0/0_9960_1577671998.6182477.png")
+img_pp =  preTraitement(img)
+
+dataGen = ImageDataGenerator(
+    rotation_range=15,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.2,
+    shear_range=0.1,
+    brightness_range=[0.8,1.2])
+
+model = Sequential()
+model.add(keras.layers.Conv2D(32, (3,3), activation='relu'))
+model.add(keras.layers.MaxPooling2D(2,2))
+model.add(keras.layers.Conv2D(64, (3,3), activation='relu'))
+model.add(keras.layers.MaxPooling2D(2,2))
+model.add(keras.layers.Flatten())
+model.add(keras.layers.Dense(500,activation='relu'))
+model.add(keras.layers.Dense(43,activation='softmax'))
+
+model.summary()
 
