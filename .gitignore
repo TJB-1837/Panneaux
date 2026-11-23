@@ -2,3 +2,6 @@ Full_Data/*
 myData
 .vscode
 .venv
+__pycache__/
+/artifacts/
+/yolo11n.pt
