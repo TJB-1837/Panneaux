@@ -3,5 +3,5 @@ myData
 .vscode
 .venv
 __pycache__/
-/artifacts/
+#/artifacts/
 /yolo11n.pt
