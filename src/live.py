@@ -6,6 +6,7 @@ import numpy as np
 
 from .detector import proposals
 from .model import Classifier
+from .vision import filter_predictions
 
 
 @contextmanager
@@ -73,7 +74,7 @@ def screen_frames(title):
 
 
 def live(args):
-    classifier = Classifier(args.bundle)
+    classifier = Classifier(args.bundle, num_threads=args.threads)
     detect = proposals(args)
     if args.window:
         source = screen_frames(args.window)
@@ -81,19 +82,28 @@ def live(args):
         source = video_frames(str(args.video) if args.video is not None else args.camera)
     try:
         with source as frames:
+            previous_display = perf_counter()
             for frame in frames:
                 start = perf_counter()
-                results = list(classifier.classify(frame, detect(frame)))
-                elapsed = 1000 * (perf_counter() - start)
+                boxes = detect(frame)
+                detection_end = perf_counter()
+                results = filter_predictions(classifier.classify(frame, boxes), args.threshold)
+                classification_end = perf_counter()
                 for (x1, y1, x2, y2), label, score in results:
-                    if score < args.threshold:
-                        continue
                     name = classifier.names[label]
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     cv2.putText(frame, f"{name} {score:.0%}", (x1, max(14, y1 - 5)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-                cv2.putText(frame, f"{elapsed:.0f} ms", (12, 24), cv2.FONT_HERSHEY_SIMPLEX,
+                elapsed = 1000 * (classification_end - start)
+                detection_ms = 1000 * (detection_end - start)
+                classification_ms = 1000 * (classification_end - detection_end)
+                now = perf_counter()
+                fps = 1 / max(now - previous_display, 1e-6)
+                previous_display = now
+                cv2.putText(frame, f"{elapsed:.0f} ms | {fps:.1f} FPS | {len(boxes)} zones", (12, 24), cv2.FONT_HERSHEY_SIMPLEX,
                             0.6, (0, 255, 0), 2)
+                cv2.putText(frame, f"Detection {detection_ms:.0f} ms | Classification {classification_ms:.0f} ms",
+                            (12, 46), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
                 cv2.imshow("Reconnaissance de panneaux", frame)
                 if cv2.waitKey(1) & 0xff in (27, ord("q")):
                     break

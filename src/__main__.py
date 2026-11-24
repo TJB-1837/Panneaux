@@ -25,8 +25,13 @@ def classifier_options(parser):
     parser.add_argument("--detector-size", type=positive, default=960)
     parser.add_argument("--detector-threshold", type=probability, default=0.25)
     parser.add_argument("--device", help="périphérique YOLO, par exemple cpu ou 0")
-    parser.add_argument("--min-size", type=positive, default=16, help="côté minimal pour Canny")
-    parser.add_argument("--max-size", type=positive, help="côté maximal facultatif pour Canny")
+    parser.add_argument("--threads", type=positive, default=4, help="threads du classifieur TFLite")
+    parser.add_argument("--proposal-mode", choices=("color", "canny"), default="color",
+                        help="régions rouges, bleues et jaunes, ou contours Canny")
+    parser.add_argument("--max-candidates", type=positive, default=64,
+                        help="nombre maximal de régions classifiées par image")
+    parser.add_argument("--min-size", type=positive, default=16, help="côté minimal pour les propositions couleur ou Canny")
+    parser.add_argument("--max-size", type=positive, help="côté maximal facultatif pour les propositions couleur ou Canny")
     parser.add_argument("--canny", type=positive, nargs=2, default=(100, 200),
                         metavar=("BAS", "HAUT"))
 

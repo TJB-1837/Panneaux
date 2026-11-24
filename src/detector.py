@@ -4,13 +4,18 @@ import shutil
 from pathlib import Path
 
 from .data import check_disjoint, clip_box, read_split
-from .vision import canny_boxes
+from .vision import canny_boxes, color_boxes, suppress_overlaps
 
 
 def proposals(args):
     if args.detector is None:
         def detect(frame):
-            return list(canny_boxes(frame, args.min_size, args.max_size, *args.canny))
+            if args.proposal_mode == "color":
+                boxes = color_boxes(frame, args.min_size, args.max_size)
+            else:
+                boxes = list(canny_boxes(frame, args.min_size, args.max_size, *args.canny))
+                boxes.sort(key=lambda b: (b[2] - b[0]) * (b[3] - b[1]), reverse=True)
+            return suppress_overlaps(boxes, limit=args.max_candidates)
         return detect
 
     from ultralytics import YOLO
@@ -20,7 +25,7 @@ def proposals(args):
     def detect(frame):
         height, width = frame.shape[:2]
         result, = model.predict(frame, imgsz=args.detector_size, conf=args.detector_threshold,
-                                device=args.device, verbose=False)
+                                device=args.device, max_det=args.max_candidates, verbose=False)
         boxes = [clip_box(box, width, height) for box in result.boxes.xyxy.cpu().tolist()]
         return [box for box in boxes if box[2] > box[0] and box[3] > box[1]]
 

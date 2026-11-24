@@ -5,7 +5,7 @@ import numpy as np
 from .data import read_split
 from .detector import proposals
 from .model import Classifier
-from .vision import intersection_over_union, read_image
+from .vision import filter_predictions, intersection_over_union, read_image
 
 
 def classification_metrics(confusion, names):
@@ -80,7 +80,7 @@ class DetectionMetrics:
 
 
 def evaluate(args):
-    classifier = Classifier(args.bundle, batch_size=args.batch)
+    classifier = Classifier(args.bundle, batch_size=args.batch, num_threads=args.threads)
     classes = {name: index for index, name in enumerate(classifier.names)}
     scenes = read_split(args.data, args.split, limit=args.limit)
     confusion = np.zeros((len(classes), len(classes)), dtype=np.int64)
@@ -104,13 +104,23 @@ def evaluate(args):
             raw.add([(box, None) for box in boxes], truth, args.iou)
             estimates = list(classifier.classify(frame, boxes))
             for threshold, metric in final.items():
-                metric.add([(box, label) for box, label, score in estimates if score >= threshold],
+                accepted = filter_predictions(estimates, threshold)
+                metric.add([(box, label) for box, label, _ in accepted],
                            truth, args.iou)
 
     report = {"images": len(scenes), "classes": classifier.names}
     if confusion.sum():
         report["classification"] = classification_metrics(confusion, classifier.names)
     if args.pipeline:
+        report["detection_settings"] = {
+            "detector": str(args.detector) if args.detector else args.proposal_mode,
+            "max_candidates": args.max_candidates,
+            "min_size": args.min_size,
+            "max_size": args.max_size,
+            "canny": list(args.canny),
+            "detector_size": args.detector_size,
+            "detector_threshold": args.detector_threshold,
+        }
         report["iou"] = args.iou
         report["proposals"] = raw.report(len(scenes))
         report["pipeline"] = {str(threshold): metric.report(len(scenes))

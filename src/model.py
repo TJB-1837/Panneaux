@@ -18,7 +18,7 @@ def export_bundle(model, names, destination):
 
 
 class Classifier:
-    def __init__(self, bundle: Path, batch_size=1):
+    def __init__(self, bundle: Path, batch_size=1, num_threads=4):
         import tensorflow as tf
 
         self.names = json.loads((bundle / "classes.json").read_text(encoding="utf-8"))
@@ -27,7 +27,9 @@ class Classifier:
                 or len(set(self.names)) != len(self.names)):
             raise ValueError("Table de classes invalide")
 
-        self.interpreter = tf.lite.Interpreter(model_path=str(bundle / "model.tflite"))
+        self.interpreter = tf.lite.Interpreter(
+            model_path=str(bundle / "model.tflite"), num_threads=num_threads
+        )
         inputs = self.interpreter.get_input_details()
         outputs = self.interpreter.get_output_details()
         if len(inputs) != 1 or len(outputs) != 1 or len(inputs[0]["shape"]) != 4:
